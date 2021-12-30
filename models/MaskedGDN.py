@@ -25,7 +25,7 @@ class MaskedGDN(nn.Module):
         self.GDN = GDN(edge_index_sets,node_num,**kwargs)
         self.masking_indeces = kwargs['masking_indeces']
         self.n_masks = n_masks
-        
+        self.feat_order = [n for g in self.masking_indeces for n in g]
         
         print(f"Using masked model with {n_masks} masks on {node_num} features.")
         self.masks = self._create_masks(self.node_num,n_masks,kwargs['batch'])
@@ -61,15 +61,20 @@ class MaskedGDN(nn.Module):
         x_with_masked_last_state = torch.cat((repeated_x,masked_last_state), axis =-1)
         x_with_masked_last_state = x_with_masked_last_state.view(-1,self.node_num,self.input_dim)
 
-        data = x_with_masked_last_state # shape: (bsz,n_masks,n_nodes,n_feats)
+        data = x_with_masked_last_state # shape: (bsz*n_masks,n_nodes,n_feats)
        
         out = self.GDN(data,org_edge_index)
 
         out = out.reshape(-1,n_masks,n_features,1)  #split by mask
         out = out[masks==0].view(-1,self.node_num) #collect the predictions for masked values
-        
 
-        return out
+        #feat_order =#torch.cat(torch.tensor(self.masking_indeces)).to(out.get_device())
+        result = torch.zeros_like(out)
+        result[:,self.feat_order]= out
+
+        
+        #print(result)
+        return result
 
     def test_prediction(self,data, org_edge_index, last_state):
         return self(data,org_edge_index,last_state)
