@@ -119,8 +119,8 @@ class Main():
 
         if train_config['n_masks']>0:
             indeces = np.arange(len(feature_map))
-            perm = np.random.permutation(indeces)
-            groups = [list(perm)]
+            perm = indeces#np.random.permutation(indeces)
+            groups = [list(indeces)]
             
             if train_config['group_search']>0 and train_config['n_masks']!=len(feature_map):
                 #Get groups using grouper
@@ -305,6 +305,9 @@ if __name__ == "__main__":
     torch.backends.cudnn.deterministic = True
     os.environ['PYTHONHASHSEED'] = str(args.random_seed)
 
+    import types
+    #myargs = types.SimpleNamespace(batch=32, comment='swat', custom_edges='false', dataset='swat', decay=0, device='cuda:0', dim=64, epoch=50, group_search=1, load_model_path='', model='GDN', n_masks=50, out_layer_inter_dim=16, out_layer_num=2, random_seed=0, report='best', save_path_pattern='swat', slide_stride=1, slide_win=5, topk=15, val_ratio=0.2,lr=1e-3)
+    #args = myargs
 
     train_config = {
         'batch': args.batch,
