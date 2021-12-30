@@ -27,7 +27,8 @@ def run_config(args):
         'topk': args.topk,
         'n_masks':args.n_masks,
         'group_search':args.group_search,
-        'model':args.model
+        'model':args.model,
+        'lr':args.lr
         
     }
 
@@ -103,6 +104,7 @@ if __name__=='__main__':
     args.load_model_path=''
     args.custom_edges = 'false'
     args.val_ratio = 0.2
+    args.lr = [1e-2,1e-3,1e-4]
 
     torch.multiprocessing.set_start_method('spawn') 
     configs = ConfigGenerator(args)
@@ -137,8 +139,10 @@ if __name__=='__main__':
             result_dict={"params":str(cfg),**dict(mean)}           
             send_message(json.dumps(result_dict)) 
             result_list.append(copy.deepcopy(result_dict))
-            
-            pd.DataFrame(result_list).to_csv("finetuning_results.csv")
+            existing_df = pd.read_csv('finetuning_results.csv')
+            existing_df.append(pd.DataFrame(result_list))
+            existing_df.to_csv("finetuning_results.csv")
+
     send_message('Done finetuning')
 
 

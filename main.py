@@ -172,7 +172,7 @@ class Main():
                 test_dataset=self.test_dataset,
                 train_dataset=self.train_dataset,
                 dataset_name=self.env_config['dataset'],
-                lr=1e-3
+                lr=self.train_config['lr']
             )
         
         # test
@@ -293,7 +293,7 @@ if __name__ == "__main__":
     parser.add_argument('-n_masks', help='how many masks to use', type = int, default=0)
     parser.add_argument('-group_search', help='how long to search for good groups', type = float, default=0)
     parser.add_argument('-model', help='Which model to use, GDN or Transformer', type = str, default="GDN")
-
+    parser.add_argument('-lr',type=float, default=1e-3)
     args = parser.parse_args()
 
     random.seed(args.random_seed)
@@ -321,7 +321,8 @@ if __name__ == "__main__":
         'topk': args.topk,
         'n_masks':args.n_masks,
         'group_search':args.group_search,
-        'model':args.model
+        'model':args.model,
+        'lr':args.lr
     }
 
     env_config={
