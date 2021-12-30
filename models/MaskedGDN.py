@@ -25,7 +25,7 @@ class MaskedGDN(nn.Module):
         self.GDN = GDN(edge_index_sets,node_num,**kwargs)
         self.masking_indeces = kwargs['masking_indeces']
         self.n_masks = n_masks
-        self.mix = nn.Sequential(nn.ReLU(),nn.Linear(self.node_num,self.node_num))
+        
         
         print(f"Using masked model with {n_masks} masks on {node_num} features.")
         self.masks = self._create_masks(self.node_num,n_masks,kwargs['batch'])
@@ -36,7 +36,6 @@ class MaskedGDN(nn.Module):
 
         '''
         feat_groups = self.masking_indeces
-        mask_inds = torch.arange(n_masks)
         masks = torch.ones(bsz,n_masks,n_feats,1)
         for i,group in enumerate(feat_groups):
             masks[:,i,group]=0
@@ -57,7 +56,7 @@ class MaskedGDN(nn.Module):
         masked_last_state = last_state.reshape(-1,1,n_features,1) * masks #batch_size,num_masks,n_nodes,1
 
         x = data.reshape([-1, 1,self.node_num, self.input_dim-1])
-        repeated_x = x.repeat(1,n_masks,1,1) #shape: (bsz,n_masks,n_nodes,n_steps)
+        repeated_x = x.expand(x.shape[0],n_masks,x.shape[2],x.shape[3]) #shape: (bsz,n_masks,n_nodes,n_steps)
 
         x_with_masked_last_state = torch.cat((repeated_x,masked_last_state), axis =-1)
         x_with_masked_last_state = x_with_masked_last_state.view(-1,self.node_num,self.input_dim)
@@ -68,7 +67,7 @@ class MaskedGDN(nn.Module):
 
         out = out.reshape(-1,n_masks,n_features,1)  #split by mask
         out = out[masks==0].view(-1,self.node_num) #collect the predictions for masked values
-        #out = self.mix(out)
+        
 
         return out
 
