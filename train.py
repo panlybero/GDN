@@ -17,18 +17,15 @@ from scipy.stats import iqr
 
 
 
-def loss_func(y_pred, y_true):
-    loss = F.mse_loss(y_pred, y_true, reduction='mean')
-
-    return loss
 
 
 
-def train(model = None, save_path = '', config={},  train_dataloader=None, val_dataloader=None, feature_map={}, test_dataloader=None, test_dataset=None, dataset_name='swat', train_dataset=None):
+
+def train(model = None, save_path = '', config={},  train_dataloader=None, val_dataloader=None, feature_map={}, test_dataloader=None, test_dataset=None, dataset_name='swat', train_dataset=None,lr=0.001):
 
     seed = config['seed']
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=config['decay'])
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=config['decay'])
 
     now = time.time()
     
@@ -60,14 +57,14 @@ def train(model = None, save_path = '', config={},  train_dataloader=None, val_d
         acu_loss = 0
         model.train()
 
-        for x, labels, attack_labels, edge_index in dataloader:
+        for x, last_state, attack_labels, edge_index in dataloader:
             _start = time.time()
 
-            x, labels, edge_index = [item.float().to(device) for item in [x, labels, edge_index]]
-
+            x, last_state, edge_index = [item.float().to(device) for item in [x, last_state, edge_index]]
+            
             optimizer.zero_grad()
-            out = model(x, edge_index).float().to(device)
-            loss = loss_func(out, labels)
+            out = model(x, edge_index, last_state= last_state).float().to(device) # give 
+            loss = model.loss_func(out, last_state)
             
             loss.backward()
             optimizer.step()
@@ -79,11 +76,7 @@ def train(model = None, save_path = '', config={},  train_dataloader=None, val_d
             i += 1
 
 
-        # each epoch
-        print('epoch ({} / {}) (Loss:{:.8f}, ACU_loss:{:.8f})'.format(
-                        i_epoch, epoch, 
-                        acu_loss/len(dataloader), acu_loss), flush=True
-            )
+        
 
         # use val dataset to judge
         if val_dataloader is not None:
@@ -108,5 +101,9 @@ def train(model = None, save_path = '', config={},  train_dataloader=None, val_d
                 min_loss = acu_loss
 
 
-
+        # each epoch
+        print('epoch ({} / {}) (Loss:{:.8f}, ACU_loss:{:.8f}, Val_loss:{:.8f})'.format(
+                        i_epoch, epoch, 
+                        acu_loss/len(dataloader), acu_loss,val_loss), flush=True
+            )
     return train_loss_list

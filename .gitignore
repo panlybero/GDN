@@ -2,6 +2,9 @@ pretrained/
 results/
 logs/
 runs/
+runs_no_edges/
+runs_with_edges/
 temp/
+data/
 run_copy.sh
 __pycache__

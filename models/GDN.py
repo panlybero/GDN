@@ -80,7 +80,7 @@ class GNNLayer(nn.Module):
 
 
 class GDN(nn.Module):
-    def __init__(self, edge_index_sets, node_num, dim=64, out_layer_inter_dim=256, input_dim=10, out_layer_num=1, topk=20):
+    def __init__(self, edge_index_sets, node_num, dim=64, out_layer_inter_dim=256, input_dim=10, out_layer_num=1, topk=20,**kwargs):
 
         super(GDN, self).__init__()
 
@@ -118,8 +118,11 @@ class GDN(nn.Module):
     def init_params(self):
         nn.init.kaiming_uniform_(self.embedding.weight, a=math.sqrt(5))
 
+    def loss_func(self,y_pred, y_true):
+        loss = F.mse_loss(y_pred, y_true, reduction='mean')
+        return loss
 
-    def forward(self, data, org_edge_index):
+    def forward(self, data, org_edge_index, **kwargs):
 
         x = data.clone().detach()
         edge_index_sets = self.edge_index_sets
@@ -185,4 +188,7 @@ class GDN(nn.Module):
    
 
         return out
+
+    def test_prediction(self, data, org_edge_index, **kwargs):
+        return self(data, org_edge_index, **kwargs)
         

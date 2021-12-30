@@ -28,7 +28,7 @@ def get_fc_graph_struc(dataset):
     return struc_map
 
 def get_prior_graph_struc(dataset):
-    feature_file = open(f'./data/{dataset}/features.txt', 'r')
+    feature_file = open(f'./data/{dataset}/list.txt', 'r')
 
     struc_map = {}
     feature_list = []

@@ -66,7 +66,10 @@ class TimeDataset(Dataset):
         feature = self.x[idx].double()
         y = self.y[idx].double()
 
-        edge_index = self.edge_index.long()
+        if self.config['custom_edges']:
+            edge_index = torch.LongTensor(self.edge_index[idx])
+        else:
+            edge_index = self.edge_index.long()
 
         label = self.labels[idx].double()
 
