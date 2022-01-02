@@ -305,7 +305,7 @@ if __name__ == "__main__":
     parser.add_argument('-custom_edges', help='use_custom_edges', type = str, default='false')
     parser.add_argument('-n_masks', help='how many masks to use', type = int, default=0)
     parser.add_argument('-group_search', help='how long to search for good groups', type = float, default=0)
-    parser.add_argument('-model', help='Which model to use, GDN or Transformer', type = str, default="Transformer")
+    parser.add_argument('-model', help='Which model to use, GDN or Transformer', type = str, default="GDN")
     parser.add_argument('-lr',type=float, default=1e-3)
     args = parser.parse_args()
 
