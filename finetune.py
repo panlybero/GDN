@@ -11,6 +11,7 @@ import torch.multiprocessing as mp
 import pandas as pd
 from slack_message import send_message
 import json
+import os
 def run_config(args):
     train_config = {
         'batch': args.batch,
@@ -44,7 +45,7 @@ def run_config(args):
 
     main = Main(train_config, env_config, debug=False)
     results_dict = main.run()
-    return results_dict
+    return results_dict, main.model_save_path
 
 
 class ConfigGenerator:
@@ -78,25 +79,24 @@ class ConfigGenerator:
         return len(self.all_combinations)
     
 
-
-    
 if __name__=='__main__':
 
+
     args = types.SimpleNamespace()
-    args.batch=64
-    args.device='cuda:0'
-    args.epoch = 30
+    args.batch=32
+    args.device='cuda:2'
+    args.epoch = 50
     args.slide_win=5
-    args.dim=[16,32,64,128]
+    args.dim=list(range(16,129,16))
     args.slide_stride=1
     args.dataset='swat'
     args.comment=args.dataset
-    args.random_seed=0
+    args.random_seed=np.random.randint(10000)
     args.out_layer_num = [1,2,3,4]
-    args.out_layer_inter_dim=[16,32,64,128]
-    args.decay=[0,0.1,1]
-    args.topk=[5,10,15]
-    args.n_masks=[10,20,50]
+    args.out_layer_inter_dim=list(range(16,129,16))
+    args.decay=0
+    args.topk=[5,10,15,20]
+    args.n_masks=50
     args.group_search=1
     args.model='GDN'
     args.save_path_pattern=args.dataset
@@ -104,18 +104,20 @@ if __name__=='__main__':
     args.load_model_path=''
     args.custom_edges = 'false'
     args.val_ratio = 0.2
-    args.lr = [1e-2,1e-3,1e-4]
+    args.lr = [1e-3,1e-4]
 
     torch.multiprocessing.set_start_method('spawn') 
     configs = ConfigGenerator(args)
-    
+    print(len(configs))
     random_configs = np.random.choice(range(len(configs)), 200,replace=False)
     
     random_configs = [configs[i] for i in random_configs]
-    result_list = []
-    for cfg in random_configs:
+    result_list = {}
+    for indx,cfg in enumerate(random_configs):
         
         procs = []
+        result,save_path=run_config(cfg)
+        '''
         with Pool(processes=4) as pool: 
             confs = []
             for i in range(4):
@@ -127,21 +129,30 @@ if __name__=='__main__':
                 results = pool.map_async(run_config,confs)
                 results = results.get()
             except RuntimeError:
+                print("oom error, reducing batch size to 16")
                 torch.cuda.empty_cache()
                 for conf in confs:
                     conf.batch=16
                 results = pool.map_async(run_config,confs)
                 results = results.get()
+        '''
+        #df = pd.DataFrame(results)
+        #mean = df.mean(axis=0)
+        
+        #result_dict={"params":str(cfg),**dict(mean)}        
+        result_dict={"params":str(cfg),**result}      
+        send_message(json.dumps(result_dict)) 
+        result_list[save_path]=copy.deepcopy(result_dict)
 
-            df = pd.DataFrame(results)
-            mean = df.mean(axis=0)
+        if 'finetuning_results.json' in os.listdir('./'):
+            with open('finetuning_results.json','r') as f:
+                existing_results = json.load(f)
+
+            result_list.update(existing_results)
+
+        with open('finetuning_results.json','w') as f:
+                json.dump(result_list,f)
             
-            result_dict={"params":str(cfg),**dict(mean)}           
-            send_message(json.dumps(result_dict)) 
-            result_list.append(copy.deepcopy(result_dict))
-            existing_df = pd.read_csv('finetuning_results.csv')
-            existing_df.append(pd.DataFrame(result_list))
-            existing_df.to_csv("finetuning_results.csv")
 
     send_message('Done finetuning')
 

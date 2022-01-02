@@ -16,16 +16,11 @@ from scipy.stats import iqr
 
 
 
-
-
-
-
-
 def train(model = None, save_path = '', config={},  train_dataloader=None, val_dataloader=None, feature_map={}, test_dataloader=None, test_dataset=None, dataset_name='swat', train_dataset=None,lr=0.001):
 
     seed = config['seed']
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=config['decay'])
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=config['decay'], betas = (0.9,0.99))
 
     now = time.time()
     
@@ -43,7 +38,7 @@ def train(model = None, save_path = '', config={},  train_dataloader=None, val_d
 
     i = 0
     epoch = config['epoch']
-    early_stop_win = 15
+    early_stop_win = 10
 
     model.train()
 
@@ -69,6 +64,7 @@ def train(model = None, save_path = '', config={},  train_dataloader=None, val_d
             loss.backward()
             optimizer.step()
 
+            
             
             train_loss_list.append(loss.item())
             acu_loss += loss.item()

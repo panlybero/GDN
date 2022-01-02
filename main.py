@@ -69,7 +69,7 @@ class Main():
 
         self.feature_map = feature_map
 
-        
+       
 
         train_dataset_indata = construct_data(train, feature_map, labels=0)
         test_dataset_indata = construct_data(test, feature_map, labels=test.attack.tolist())
@@ -120,14 +120,16 @@ class Main():
         if train_config['n_masks']>0:
             indeces = np.arange(len(feature_map))
             perm = indeces#np.random.permutation(indeces)
-            groups = [list(indeces)]
             
-            if train_config['group_search']>0 and train_config['n_masks']!=len(feature_map):
+            
+            if train_config['n_masks']!=len(feature_map):
                 #Get groups using grouper
                 print((self.train_dataset.x.shape))
                 
                 grouper = get_feature_grouper("ClusteringGrouper",train_config=train_config,train_dataset=self.train_dataset,initial_state=perm)
                 groups = grouper.get_groups()
+            else:
+                groups =[[i] for i in indeces]
 
             self.model = MaskedGDN(train_config['n_masks'],edge_index_sets, len(feature_map), 
                     dim=train_config['dim'], 
@@ -162,7 +164,7 @@ class Main():
             model_save_path = self.env_config['load_model_path']
         else:
             model_save_path = self.get_save_path()[0]
-
+            self.model_save_path = model_save_path
             self.train_log = train(self.model, model_save_path, 
                 config = self.train_config,
                 train_dataloader=self.train_dataloader,
@@ -183,10 +185,20 @@ class Main():
         test_loss, self.test_result = test(best_model, self.test_dataloader)
         val_loss, self.val_result = test(best_model, self.val_dataloader)
 
+        test_per_entry_loss = (np.array(self.test_result[0]) - np.array(self.test_result[1]))**2
+        val_per_entry_loss = (np.array(self.val_result[0]) - np.array(self.val_result[1]))**2
 
+        anomaly_dict = dict(test = test_per_entry_loss.T, normal = val_per_entry_loss.T)
+        self.anomaly_dict = anomaly_dict
+
+        results_dict_loss=self.get_score(self.test_result, self.val_result, anomaly_scores=anomaly_dict)
+        results_dict_loss = {k+"_loss":v for k,v in results_dict_loss.items()}
         results_dict=self.get_score(self.test_result, self.val_result)
+        
+        results_dict.update(results_dict_loss)
         results_dict['val_loss']=val_loss
         results_dict['test_loss']=test_loss
+
 
         for k,v in results_dict.items():
             print(k,":",v)
@@ -227,6 +239,7 @@ class Main():
 
         if anomaly_scores is None:
             test_scores, normal_scores = get_full_err_scores(test_result, val_result)
+            print(test_scores.shape, normal_scores.shape)
         else:
             test_scores, normal_scores = anomaly_scores['test'],anomaly_scores['normal']
 
@@ -292,18 +305,18 @@ if __name__ == "__main__":
     parser.add_argument('-custom_edges', help='use_custom_edges', type = str, default='false')
     parser.add_argument('-n_masks', help='how many masks to use', type = int, default=0)
     parser.add_argument('-group_search', help='how long to search for good groups', type = float, default=0)
-    parser.add_argument('-model', help='Which model to use, GDN or Transformer', type = str, default="GDN")
+    parser.add_argument('-model', help='Which model to use, GDN or Transformer', type = str, default="Transformer")
     parser.add_argument('-lr',type=float, default=1e-3)
     args = parser.parse_args()
 
-    random.seed(args.random_seed)
-    np.random.seed(args.random_seed)
-    torch.manual_seed(args.random_seed)
-    torch.cuda.manual_seed(args.random_seed)
-    torch.cuda.manual_seed_all(args.random_seed)
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
-    os.environ['PYTHONHASHSEED'] = str(args.random_seed)
+    #random.seed(args.random_seed)
+    #np.random.seed(args.random_seed)
+    #torch.manual_seed(args.random_seed)
+    #torch.cuda.manual_seed(args.random_seed)
+    #torch.cuda.manual_seed_all(args.random_seed)
+    #torch.backends.cudnn.benchmark = False
+    #torch.backends.cudnn.deterministic = True
+    #os.environ['PYTHONHASHSEED'] = str(args.random_seed)
 
     import types
     #myargs = types.SimpleNamespace(batch=32, comment='swat', custom_edges='false', dataset='swat', decay=0, device='cuda:0', dim=64, epoch=50, group_search=1, load_model_path='', model='GDN', n_masks=50, out_layer_inter_dim=16, out_layer_num=2, random_seed=0, report='best', save_path_pattern='swat', slide_stride=1, slide_win=5, topk=15, val_ratio=0.2,lr=1e-3)
